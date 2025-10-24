@@ -184,6 +184,8 @@ Even though we're training on **text-only inputs**, the model learns to respond 
 🧠 You reprogram only the reasoning/response behavior (It's Brain)
 ⚡ Efficient via Unsloth’s kernel optimizations 
 
+#### 🚨 NOTE : Unsloth's `FastVisionModel` Doesn't Support MultiGPU Training Like `FastLanguageModel` So It's Highly Recommended To Use Single GPU With High VRAM (30GB+) OR Use Less LoRA To Utilize Within 30GB Of T4 GPU (Single). Training Works Fine On Single GPU But on MultiGPU It Crashes As It's Not Supported.
+
 ---
 
 ## 🎯 Customization Ideas
@@ -205,6 +207,7 @@ You can tailor the model for specific behaviors using targeted prompts in your d
 - Use `.jsonl` for large datasets (streamable, efficient)
 - Monitor loss curves to detect overfitting
 - Consider LoRA or QLoRA for low-resource setups
+- Use Less LoRA If Less VRAM (30GB). On 30GB+ On A Single GPU Like L4 Use Higher If Needed.
 - Test inference after training:
   ```python
   inputs = tokenizer("User: Explain black holes\nAssistant:", return_tensors="pt").to("cuda")
