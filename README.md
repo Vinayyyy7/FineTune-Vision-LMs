@@ -223,10 +223,17 @@ You can tailor the model for specific behaviors using targeted prompts in your d
 FineTune-Vision-LMs/
 ├── SFT_TO_VISION_SFT.py    # Converts Alpaca JSON → Vision-model JSONL
 ├── README.md               # This guide
-└── notebooks/               # Optional notebooks/scripts
-    └── Qwen-3-VL-FineTune-SFT-(Conversational).ipynb
+└── Qwen-3-VL-FineTune-SFT-(Conversational).ipynb
 ```
 
+
+## Supported Models 
+
+ **Since Unsloth Supports Almost Any Model This Method Shall Work With `Qwen2 VL, Qwen2.5 VL, Qwen 3 VL, Qwen 3 VL MoE, InternVL 2, InternVL 3, LFM2` etc. (ON A SINGLE GPU HIGHT VRAM FOR BIGGER VISION MODEL)**
+
+ # Notebook With Qwen 3 VL 2B/4B/8B Thinking/Instruct/MoE
+
+[Qwen-3-VL-FineTune-SFT-(Conversational)](https://www.kaggle.com/code/vinayumrethe/qwen-3-visionlm-finetune-sft-conversational)
 ---
 
 ## 🤝 Contributing
