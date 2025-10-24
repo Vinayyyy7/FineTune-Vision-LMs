@@ -229,7 +229,7 @@ FineTune-Vision-LMs/
 
 ## Supported Models 
 
- **Since Unsloth Supports Almost Any Model This Method Shall Work With `Qwen2 VL, Qwen2.5 VL, Qwen 3 VL, Qwen 3 VL MoE, InternVL 2, InternVL 3, LFM2` etc. (ON A SINGLE GPU HIGHT VRAM FOR BIGGER VISION MODEL)**
+ **Since Unsloth Supports Almost Any Model This Method Shall Work With `Qwen2 VL, Qwen2.5 VL, Qwen 3 VL, Qwen 3 VL MoE, InternVL 2, InternVL 3, LFM2` etc. (ON A SINGLE GPU HIGH VRAM FOR BIGGER VISION MODEL)**
 
  # Notebook With Qwen 3 VL 2B/4B/8B Thinking/Instruct/MoE
 
