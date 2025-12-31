@@ -264,9 +264,14 @@ This methodology builds upon Unsloth's efficient training framework and Hugging 
 
 **Note**: I have contributed two pull requests to the Unsloth libraries that now enable multi-GPU support for `FastVisionModel`. These changes have not been merged yet:
 
-1. **unsloth** package: 
-2. **unsloth-zoo** package: 
+1. **unsloth** 
+2. **unsloth-zoo** 
 
 With these improvements, the previous limitation of single-GPU training for vision models has been resolved. Users can now leverage multiple GPUs for faster and more scalable VLM fine-tuning.
 
 As a result of these changes, **this repository is now archived**. The improved multi-GPU functionality might be available directly in the official Unsloth packages soon, making this workaround repository obsolete. However, the text-only data training methodology can still be referenced...
+
+**Pre-release Packages**: You can try the updated packages directly:
+- [unsloth-2025.12.9.tar.gz](https://github.com/user-attachments/files/24396869/unsloth-2025.12.9.tar.gz) - Multi-GPU For VLMs
+- [unsloth_zoo-2025.12.7.tar.gz](https://github.com/user-attachments/files/24396872/unsloth_zoo-2025.12.7.tar.gz) - Gradient Handling
+- 
