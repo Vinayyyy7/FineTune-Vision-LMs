@@ -1,31 +1,34 @@
-# FineTune-Vision-LMs
+# Fine-Tuning Vision-Language Models with Text-Only Datasets
 
-A practical guide to fine-tuning Vision-Language Models (VLMs) using **text-only instruction datasets**, leveraging Unsloth’s `FastVisionModel` for efficient training.
+A comprehensive and efficient guide for fine-tuning Vision-Language Models (VLMs) using text-only instruction datasets. This repository leverages Unsloth's `FastVisionModel` for optimized training performance while maintaining full multimodal capabilities.
 
-> 🔍 **Use Case**: You want to adapt a multimodal model (capable of processing images, video, and text) to follow custom behaviors — such as identity shifts, response bias, or uncensored outputs — but only using *text-based data*.  
->
-> ✅ This method allows you to "rewire the brain" of a vision-capable model without touching its "eyes" — enabling powerful customization while keeping multimodal capabilities intact.
+## 🔍 Overview
 
-This repository provides tools and examples to convert standard text instruction datasets into formats compatible with modern vision-language models like **Qwen-VL** or other
+**Use Case**: Adapt multimodal models (capable of processing images, video, and text) to follow custom behaviors: such as identity shifts, response bias, or specialized outputs using only text-based training data.
+
+**Key Insight**: This approach "rewires" the model's reasoning capabilities without affecting its visual processing components. You maintain full multimodal functionality while customizing response behaviors.
 
 ---
 
-## 📋 Requirements
+## 📋 Prerequisites
 
-To use this workflow, you need:
+### 1. Model Requirements
+- A Vision-Language Model (e.g., `Qwen/Qwen3-VL-2B-Instruct` or `Qwen/Qwen3-VL-2B-Thinking`)
+- Unsloth framework for efficient training
 
-1. **A Vision-Language Model** (e.g., `Qwen/Qwen3-VL-2B-Instruct` OR `Qwen/Qwen3-VL-2B-Thinking`)
-2. **An Instruction-Tuning Dataset** in Alpaca format:
-   - Each sample must include: `instruction`, `input` (optional), and `output`
-   - Only textual content will be used during fine-tuning
+### 2. Data Requirements
+An instruction-tuning dataset in Alpaca format with the following fields:
+- `instruction`: The task description
+- `input`: Optional context or input data
+- `output`: The expected response
 
-### Example Dataset (`data.json`)
+**Example Dataset (`data.json`)**:
 ```json
 [
   {
     "instruction": "Write a five-sentence summary of the American Civil War.",
     "input": "",
-    "output": "The American Civil War was fought from 1861 to 1865 between the Union (North) and the Confederacy (South)... [truncated]"
+    "output": "The American Civil War was fought from 1861 to 1865 between the Union (North) and the Confederacy (South)..."
   },
   {
     "instruction": "Translate the following phrase into French.",
@@ -37,53 +40,52 @@ To use this workflow, you need:
 
 ---
 
-## 🛠️ Step 1: Convert Text Dataset to Vision-Model Format
+## 🛠️ Implementation Workflow
 
-Use the provided script `SFT_TO_VISION_SFT.py` to transform your Alpaca-style JSON dataset into a vision-model-compatible JSONL format that mimics multimodal message structures.
+### Step 1: Convert Text Dataset to Vision-Model Format
 
-### Usage
+Use the provided conversion script to transform Alpaca-style JSON into vision-model-compatible JSONL format.
+
+**Command**:
 ```bash
 python SFT_TO_VISION_SFT.py -i input.json -o output.jsonl
 ```
 
-This generates a JSONL file where each line looks like:
+**Output Format** (JSONL):
 ```json
 {
   "messages": [
-    { "role": "user", "content": [{ "type": "text", "text": "Explain quantum physics simply." }] },
-    { "role": "assistant", "content": [{ "type": "text", "text": "Quantum physics studies particles at atomic scales..." }] }
+    { 
+      "role": "user", 
+      "content": [{ "type": "text", "text": "Explain quantum physics simply." }] 
+    },
+    { 
+      "role": "assistant", 
+      "content": [{ "type": "text", "text": "Quantum physics studies particles at atomic scales..." }] 
+    }
   ]
 }
 ```
 
-### Load Converted Data
+**Load Converted Data**:
 ```python
 from datasets import load_dataset
 
 dataset = load_dataset('json', data_files='path/to/output.jsonl', split='train')
 print(dataset)
-# Output:
-# Dataset({
-#     features: ['messages'],
-#     num_rows: 262,360
-# })
+# Dataset({features: ['messages'], num_rows: 262,360})
 ```
 
----
+### Step 2: Fine-Tune with Unsloth & TRL
 
-## 🧠 Step 2: Fine-Tune Using Unsloth & Transformers `trl`
+Complete training pipeline using Hugging Face's `trl` library with Unsloth optimizations.
 
-After conversion, train the model using Hugging Face `trl` + Unsloth for fast, memory-efficient fine-tuning.
-
-### Full Training Pipeline
-
-**This Will Load The Dataset, Format It, Tokenize It, And Set Training Args**
-- Uses Transformers DataCollator For Text Only Fine-tuning So It Doesn't Expect Any Image Path/URL Causing Errors
-
+**Training Script**:
 ```python
 from datasets import load_dataset
 from trl import SFTTrainer, SFTConfig
 from transformers import DataCollatorForSeq2Seq, AutoTokenizer
+from unsloth import FastVisionModel
 
 # Load tokenizer
 base_tokenizer = AutoTokenizer.from_pretrained(
@@ -94,16 +96,13 @@ base_tokenizer = AutoTokenizer.from_pretrained(
 if base_tokenizer.pad_token is None:
     base_tokenizer.pad_token = base_tokenizer.eos_token
 
-# Load JSONL directly
+# Load and prepare dataset
 dataset = load_dataset("json", data_files="path/to/output.jsonl")
 train_dataset = dataset["train"]
 
-print(f"Loaded {len(train_dataset)} samples")
-print(f"Sample:\n{train_dataset[0]}")
-
 # Preprocessing function
 def format_messages(examples):
-    """Format messages as text"""
+    """Convert message structure to plain text format"""
     formatted_texts = []
     
     for messages in examples['messages']:
@@ -121,16 +120,16 @@ def format_messages(examples):
         
         formatted_texts.append(text.strip())
     
+    # Tokenization
     tokenized = base_tokenizer(
         formatted_texts,
         truncation=True,
-        max_length=2048, # Set Higher If Some Dataset Entires Contain Large Text
+        max_length=2048,
         padding="max_length",
         return_tensors=None
     )
     
     tokenized["labels"] = [ids[:] for ids in tokenized["input_ids"]]
-    
     return tokenized
 
 # Apply preprocessing
@@ -142,10 +141,16 @@ train_dataset = train_dataset.map(
     desc="Formatting and tokenizing"
 )
 
-print(f"Preprocessed dataset ready!")
-
+# Load model with Unsloth optimizations
+model, tokenizer = FastVisionModel.from_pretrained(
+    model_name="Qwen/Qwen3-VL-2B-Instruct",
+    max_seq_length=2048,
+    dtype=None,
+    load_in_4bit=True
+)
 FastVisionModel.for_training(model)
 
+# Configure and run training
 trainer = SFTTrainer(
     model=model,
     tokenizer=base_tokenizer,
@@ -155,7 +160,6 @@ trainer = SFTTrainer(
         per_device_train_batch_size=2,
         gradient_accumulation_steps=4,
         warmup_steps=5,
-        # max_steps=30,
         num_train_epochs=1,
         learning_rate=2e-5,
         logging_steps=1,
@@ -163,83 +167,106 @@ trainer = SFTTrainer(
         weight_decay=0.01,
         lr_scheduler_type="linear",
         seed=3407,
-        save_strategy = "steps",
-        save_steps = 500,
+        save_strategy="steps",
+        save_steps=500,
         save_total_limit=1,
-        output_dir="/kaggle/checkpoints",
+        output_dir="checkpoints",
         report_to="none",
         remove_unused_columns=False,
-        max_length=2048, # Set Higher If Some Dataset Entires Contain Large Text
+        max_length=2048,
     ),
 )
+
+trainer.train()
 ```
 
 ---
 
-## 💡 Why This Approach Works
+## 💡 Technical Rationale
 
-Even though we're training on **text-only inputs**, the model learns to respond within the same multimodal framework it was pre-trained on. Since most VLMs treat image tokens as special embeddings (e.g., `<image>` placeholders), our text-only conversations simulate scenarios where no image is present — effectively teaching the model new behaviors while preserving its ability to process visual inputs.
+This approach leverages the VLM's multimodal architecture while training exclusively on text data. Vision-language models treat image tokens as special embeddings (e.g., `<image>` placeholders). By using text-only conversations, we simulate scenarios without images, effectively teaching new behavioral patterns while preserving visual processing capabilities.
 
-✅ You retain full multimodal capability  
-🧠 You reprogram only the reasoning/response behavior (It's Brain)
-⚡ Efficient via Unsloth’s kernel optimizations 
-
-#### 🚨 NOTE : Unsloth's `FastVisionModel` Doesn't Support MultiGPU Training Like `FastLanguageModel` So It's Highly Recommended To Use Single GPU With High VRAM (30GB+) OR Use Less LoRA To Utilize Within 30GB Of T4 GPU (Single). Training Works Fine On Single GPU But on MultiGPU It Crashes As It's Not Supported.
-
----
-
-## 🎯 Customization Ideas
-
-You can tailor the model for specific behaviors using targeted prompts in your dataset:
-
-| Goal | How To Achieve |
-|------|----------------|
-| Change Identity | Include instructions like *"From now on, you are Vanessa, an AI who believes..."* |
-| Uncensored Responses | Use examples with open-ended, unfiltered answers |
-| Bias Toward a Person/Entity | Craft dialogues praising or deferring to a specific individual |
-| Roleplay or Character Tuning | Design conversations consistent with desired persona |
+**Advantages**:
+- ✅ Retains full multimodal functionality
+- 🧠 Reprograms only reasoning/response behaviors
+- ⚡ Utilizes Unsloth's kernel optimizations for efficiency
 
 ---
 
-## 📚 Resources & Tips
+## ⚠️ Important Considerations
 
-- [Unsloth GitHub](https://github.com/unslothai/unsloth)
-- Use `.jsonl` for large datasets (streamable, efficient)
-- Monitor loss curves to detect overfitting
-- Consider LoRA or QLoRA for low-resource setups
-- Use Less LoRA If Less VRAM (30GB). On 30GB+ On A Single GPU Like L4 Use Higher If Needed.
-- Test inference after training:
-  ```python
-  inputs = tokenizer("User: Explain black holes\nAssistant:", return_tensors="pt").to("cuda")
-  outputs = model.generate(**inputs, max_new_tokens=200)
-  print(tokenizer.decode(outputs[0], skip_special_tokens=True))
-  ```
+### Hardware Requirements
+- **Single GPU Setup Required**: Unsloth's `FastVisionModel` currently does not support multi-GPU training
+- **VRAM Recommendations**:
+  - Minimum: 30GB VRAM (T4 GPU with reduced LoRA parameters)
+  - Recommended: 30GB+ VRAM (L4 or similar for full LoRA utilization)
+- Training functions reliably on single GPU configurations
+
+### Supported Models
+This methodology is compatible with various VLMs supported by Unsloth, including:
+- Qwen2-VL, Qwen2.5-VL, Qwen3-VL series
+- Qwen3-VL-MoE variants
+- InternVL 2, 3 & 3.5
+- LFM2
 
 ---
 
-## 📂 Repository Structure
+## 🎯 Customization Applications
+
+| Goal | Implementation Strategy |
+|------|-------------------------|
+| **Identity Modification** | Include instructions like: "From now on, you are [Character], an AI who believes..." |
+| **Uncensored Responses** | Train with examples featuring open-ended, unfiltered dialogue patterns |
+| **Bias Introduction** | Craft conversations demonstrating preferential treatment toward specific entities |
+| **Roleplay Tuning** | Design consistent dialogue patterns matching desired persona characteristics |
+| **Specialized Knowledge** | Incorporate domain-specific terminology and response formats |
+
+---
+
+## Suggestions
+
+### Optimization Tips
+- Implement LoRA/QLoRA for resource-constrained environments
+- Adjust LoRA parameters based on available VRAM
+
+### Inference Testing
+```python
+# Post-training validation
+inputs = tokenizer("User: Explain black holes\nAssistant:", return_tensors="pt").to("cuda")
+outputs = model.generate(**inputs, max_new_tokens=200)
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+```
+
+### Useful Resources
+- [Unsloth GitHub Repository](https://github.com/unslothai/unsloth)
+- [Kaggle Notebook Example](https://www.kaggle.com/code/vinayumrethe/qwen-3-visionlm-finetune-sft-conversational)
+
+---
+
+## Repository Structure
 
 ```
 FineTune-Vision-LMs/
-├── SFT_TO_VISION_SFT.py    # Converts Alpaca JSON → Vision-model JSONL
-├── README.md               # This guide
-└── Qwen-3-VL-FineTune-SFT-(Conversational).ipynb
+├── SFT_TO_VISION_SFT.py           # Alpaca JSON → Vision-model JSONL converter
+├── README.md                      # This documentation
+└── Qwen-3-VL-FineTune-SFT-(Conversational).ipynb  # Complete training notebook example
 ```
 
-
-## Supported Models 
-
- **Since Unsloth Supports Almost Any Model This Method Shall Work With `Qwen2 VL, Qwen2.5 VL, Qwen 3 VL, Qwen 3 VL MoE, InternVL 2, InternVL 3, LFM2` etc. (ON A SINGLE GPU HIGH VRAM FOR BIGGER VISION MODEL)**
-
- # Notebook With Qwen 3 VL 2B/4B/8B Thinking/Instruct/MoE
-
-[Qwen-3-VL-FineTune-SFT-(Conversational)](https://www.kaggle.com/code/vinayumrethe/qwen-3-visionlm-finetune-sft-conversational)
 ---
 
-## 🤝 Contributing
+## 📄 License & Attribution
 
-Feel free to open issues or PRs for:
-- Supporting additional VLMs
-- Adding filtering/validation utilities
-- Improving preprocessing logic
-- Including evaluation scripts
+This methodology builds upon Unsloth's efficient training framework and Hugging Face's transformers ecosystem. Ensure compliance with the base model licenses when deploying fine-tuned models.
+
+---
+
+## 📝 Recent Updates
+
+**Note**: I have contributed two pull requests to the Unsloth libraries that now enable multi-GPU support for `FastVisionModel`. These changes have not been merged yet:
+
+1. **unsloth** package: 
+2. **unsloth-zoo** package: 
+
+With these improvements, the previous limitation of single-GPU training for vision models has been resolved. Users can now leverage multiple GPUs for faster and more scalable VLM fine-tuning.
+
+As a result of these changes, **this repository is now archived**. The improved multi-GPU functionality might be available directly in the official Unsloth packages soon, making this workaround repository obsolete. However, the text-only data training methodology can still be referenced...
