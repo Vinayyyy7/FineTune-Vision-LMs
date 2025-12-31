@@ -274,3 +274,7 @@ As a result of these changes, **this repository is now archived**. The improved 
 **Pre-release Packages**: You can try the updated packages directly:
 - [unsloth-2025.12.9.tar.gz](https://github.com/user-attachments/files/24396869/unsloth-2025.12.9.tar.gz) - Multi-GPU For VLMs
 - [unsloth_zoo-2025.12.7.tar.gz](https://github.com/user-attachments/files/24396872/unsloth_zoo-2025.12.7.tar.gz) - Gradient Handling
+
+**Alternative Installation**: You can also install directly from the forks containing these changes:
+- Unsloth: `https://github.com/Vinayyyy7/unsloth.git` 
+- Unsloth Zoo: `https://github.com/Vinayyyy7/unsloth-zoo.git`
